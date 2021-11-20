@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script
+      src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"
+      type="text/javascript"></script>
+    <title>Document</title>
+  </head>
+  <body>
+    <select name="symbols" id="symbols">
+    </select>
+
+    <select name="date-month" id="year-month">
+      <option value=""> Select Date </option>
+      <option value="2021-01">2021-01</option>
+      <option value="2021-01">2021-02</option>
+      <option value="2021-01">2021-03</option>
+      <option value="2021-01">2021-04</option>
+      <option value="2021-01">2021-05</option>
+      <option value="2021-01">2021-06</option>
+      <option value="2021-01">2021-07</option>
+      <option value="2021-01">2021-08</option>
+      <option value="2021-01">2021-09</option>
+      <option value="2021-01">2021-10</option>
+      <option value="2021-01">2021-11</option>
+      <option value="2021-01">2021-12</option>
+    </select>
+
+    <select name="graph" id="graph">
+      <option value="OHLC">OHLC</option>
+      <option value="candleStick">CandleStick</option>
+    </select>
+
+    <button id="search">Search</button>
+
+    <div id="chartContainer" style="height: 300px; width: 100%;"></div>
+    <script type="text/javascript"
+      src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+    <script>
+ //*****************
+      
+      const ohlc = (arr) => {
+        const chartDataPoints = arr.map((v, index) => {
+          var date = v.date.split("-");
+          return({
+            x: new Date(date[0], date[1], date[2]),
+            y: [v.open, v.high, v.low, v.close],
+          });
+        });
+
+        var chart = new CanvasJS.Chart("chartContainer", {
+	        animationEnabled: true,
+	        exportEnabled: true,
+      	  exportFileName: arr[0].symbol,	
+      	  title:{
+      	  	text: (arr[0].symbol + " Stock - 2021")
+      	  },
+      	  axisX: {
+      	  	interval:1,
+      	  	intervalType: "month",
+      	  	valueFormatString: "MMM"
+      	  },
+      	  axisY: {
+      	  	prefix: "$",
+      	  	title: "Price"
+      	  },
+      	  data: [{
+      	  	type: "ohlc",
+      	  	yValueFormatString: "$###0.00", 
+      	  	xValueFormatString: "MMM YYYY",
+      	  	dataPoints: chartDataPoints,
+      	  }]
+        });
+
+        chart.render();
+      };
+
+  
+      const candleStick = (arr) => {
+        const chartDataPoints = arr.map((v, index) => {
+          var date = v.date.split("-");
+          return({
+            x: new Date(date[0], date[1], date[2]),
+            y: [v.open, v.high, v.low, v.close],
+          });
+        });
+
+      	var chart = new CanvasJS.Chart("chartContainer",
+      	{
+      		title:{
+      			text: (arr[0].symbol + " Stock - 2021")
+      		},
+      		zoomEnabled: true,
+      		axisY: {
+      			includeZero:true,
+      			title: "Prices",
+      			prefix: "$ "
+      		},
+      		axisX: {
+      			interval:2,
+		        intervalType: "month",
+			      valueFormatString: "MMM-YY",
+      			labelAngle: -45
+      		},
+      		data: [{
+      	  	type: "candlestick",
+      	  	dataPoints: chartDataPoints,
+      	  }],
+      	});
+
+      	chart.render();
+      }
+
+
+      function getStocks(symbol, date, graph) {
+        var url = "/stocks";
+        if(symbol == ""){
+          url += "/all";
+        } else {
+          url += "/" + symbol;
+        }
+        if(date != ""){
+          url += "/" + date;
+        }
+
+        $.get(url, (arr, status) => {
+          if(status == "success") {
+            /*
+              write your code here to show the chart
+            */
+            if(graph == 0){
+              ohlc(arr);
+            } else {
+              candleStick(arr);
+            }
+          } else {
+            console.log(status);
+          }
+        });
+      }
+
+      $.get("/symbols", (arr, status) => {
+        if(status == "success") {
+          var symbolSelect = document.getElementById("symbols");
+          for(v in arr){
+            symbolSelect.innerHTML += `<option value="${arr[v]}">${arr[v]}</option>`;
+          }
+          getStocks(arr[0], "", 0);
+        } else {
+          console.log(status);
+        }
+      });
+
+      var searchButton = document.getElementById("search");
+      searchButton.onclick = () => {
+        var dateSelect = document.getElementById("year-month");
+        var sym = document.getElementById("symbols");
+
+        var yearMonth = dateSelect.options[dateSelect.selectedIndex].text;
+        var symbol = sym.options[sym.selectedIndex].text;
+
+        if(yearMonth == "Select Date") yearMonth = "";
+
+        var graph = document.getElementById("graph").selectedIndex;
+
+
+        getStocks(symbol, yearMonth, graph);
+
+      }
+
+
+    </script>
+  </body>
+</html>
